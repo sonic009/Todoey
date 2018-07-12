@@ -17,7 +17,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
         
-//        //We are just printing the path in console to verify userDefaults Array..
+//        //We are just printing the path in console to verify userDefaults Array/data path..
 //        print(NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true))
         
         return true

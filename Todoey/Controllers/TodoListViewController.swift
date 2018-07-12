@@ -10,28 +10,31 @@ import UIKit
 
 class TodoListViewController: UITableViewController {
     
-    let defaults = UserDefaults.standard
+    //let defaults = UserDefaults.standard
     
     var itemArray = [Item]()
-
+    
+    //creating file path for storage ..
+    let datafilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")
+    
+    
     override func viewDidLoad() {
+        
         super.viewDidLoad()
         
-        let newItem = Item()
-        newItem.title = "Cell 1"
-        itemArray.append(newItem)
+        print(datafilePath!)
         
-        let newItem2 = Item()
-        newItem2.title = "Cell 2"
-        itemArray.append(newItem2)
+        loadItems()  //loading items from .plist file after decoding...
         
-        let newItem3 = Item()
-        newItem3.title = "Cell 3"
-        itemArray.append(newItem3)
-      
-        if let item = defaults.array(forKey: "ToDoListArray") as? [Item] {
-            itemArray = item
-        }
+//        let newItem = Item()       * Hardcode saving data into itemArray
+//        newItem.title = "Cell 1"
+//        itemArray.append(newItem)
+        
+//         loading items from ToDoListArray
+//        if let item = defaults.array(forKey: "ToDoListArray") as? [Item] {
+//            itemArray = item
+//        }
+    
     }
 
     //MARK :- Tableview datasource methods
@@ -60,7 +63,7 @@ class TodoListViewController: UITableViewController {
        
         itemArray[indexPath.row].status = !itemArray[indexPath.row].status
         
-        tableView.reloadData()
+        saveItems()    //calling for checkmarks updation
         
         //Creating animation on click ..making white on select.
         tableView.deselectRow(at: indexPath, animated: true)
@@ -81,11 +84,14 @@ class TodoListViewController: UITableViewController {
             
             self.itemArray.append(newItem)
             
-            self.defaults.set(self.itemArray, forKey: "ToDoListArray") //using defaults for persistent data IMP
+            self.saveItems() //calling for adding items..
             
-            self.tableView.reloadData()  //we just need to reload data after processing itemArray
+ //*        //self.defaults.set(self.itemArray, forKey: "ToDoListArray") //using defaults for persistent data IMP
+            //self.tableView.reloadData()  //we just need to reload data after processing itemArray
+                                        //no longer need bcz it already exists in saveItems method.
         }
-        //Adding textfield
+        
+        //Adding textfield to alert
         alert.addTextField { (alertTextField) in
             alertTextField.placeholder = "Create new item"
             textField = alertTextField
@@ -93,8 +99,32 @@ class TodoListViewController: UITableViewController {
         alert.addAction(action)
         //presenting on alert
         present(alert, animated: true, completion: nil)
-    
+
     }
     
+    //MARK :- Model manipulation methods
+    
+    func saveItems() {
+    
+        let encoder = PropertyListEncoder()
+        do {
+            let data = try encoder.encode(itemArray)
+            try data.write(to: datafilePath!)
+        }catch {
+            print("Error encoding item array, \(error)")
+        }
+        tableView.reloadData()
+    }
+  
+    func loadItems() {
+        if let data = try? Data(contentsOf: datafilePath!) {
+            let decoder = PropertyListDecoder()
+            do {
+                itemArray = try decoder.decode([Item].self, from: data)
+            }catch {
+                print("Error decoding item array, \(error)")
+            }
+        }
+    }
 }
 
