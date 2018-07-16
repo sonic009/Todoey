@@ -5,27 +5,32 @@
 //  Created by AshwaniKumar on 06/07/18.
 //  Copyright © 2018 Ashwani Kumar. All rights reserved.
 //
-
+//
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
-class TodoListViewController: UITableViewController {
+class TodoListViewController: SwipeTableViewController {
     
     //let defaults = UserDefaults.standard
     
     var todoItems: Results<Item>?
     let realm = try! Realm()
-
+    @IBOutlet weak var searchBar: UISearchBar!
+    
     var selectedCategory: Category? {
         didSet {
            loadItems()  //loading items from CONTEXT..into itemArray
+            tableView.rowHeight = 60.0
         }
     }
 
     override func viewDidLoad() {
         
         super.viewDidLoad()
-
+        
+        tableView.separatorStyle = .none
+        
         //checking file path for storage ..
         //print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
 
@@ -41,6 +46,35 @@ class TodoListViewController: UITableViewController {
     
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        
+            title = selectedCategory?.name
+
+            guard let colourHex = selectedCategory?.colour else { fatalError() }
+            updateNavbar(withHexCode: colourHex)
+     }
+
+    override func viewWillDisappear(_ animated: Bool) {
+       
+        updateNavbar(withHexCode: "1D9BF6")
+    }
+    
+    //MARK:- Navbar setup methods
+    func updateNavbar(withHexCode colourHexCode : String) {
+        
+        guard let navbar = navigationController?.navigationBar else { fatalError("Navigation controller does not exist!")}
+        
+        guard let navBarColour = UIColor(hexString: colourHexCode) else { fatalError() }
+        
+        navbar.barTintColor = navBarColour
+        
+        navbar.tintColor = ContrastColorOf(navBarColour, returnFlat: true)
+        
+        navbar.largeTitleTextAttributes = [NSAttributedStringKey.foregroundColor : ContrastColorOf(navBarColour, returnFlat: true)]
+        
+        searchBar.barTintColor = navBarColour
+    }
+
     //MARK:- Tableview datasource methods
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -50,11 +84,16 @@ class TodoListViewController: UITableViewController {
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
-        let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItemCell", for: indexPath)
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
         
         if let item = todoItems?[indexPath.row] {
             
             cell.textLabel?.text = item.title
+            
+            if let colour = UIColor(hexString: selectedCategory!.colour)?.darken(byPercentage: (CGFloat(indexPath.row) / CGFloat(todoItems!.count))) {
+                cell.backgroundColor = colour
+                cell.textLabel?.textColor = ContrastColorOf(colour, returnFlat: true)
+            }
             
             //Ternary operator ==>
             cell.accessoryType = item.status ? .checkmark : .none
@@ -96,7 +135,7 @@ class TodoListViewController: UITableViewController {
         let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
             //what'll happen once the user clicks the Add Item button on our UIAlert
 
-
+            //Creating new items..or saving
             if let currentCategory = self.selectedCategory {
                 do {
                     try self.realm.write {
@@ -116,6 +155,7 @@ class TodoListViewController: UITableViewController {
                             //no longer need bcz it already exists in saveItems method.
         }
         
+        
         //Adding textfield to alert
         alert.addTextField { (alertTextField) in
             alertTextField.placeholder = "Create new item"
@@ -130,24 +170,27 @@ class TodoListViewController: UITableViewController {
     
     //MARK:- Model manipulation methods
    
-//func saveItems() {
-//
-//    do {
-//        try context.save()
-//    }catch {
-//
-//        print("Error saving context, \(error)")
-//    }
-//    tableView.reloadData()
-//}
-
     func loadItems() {
 
         todoItems = selectedCategory?.items.sorted(byKeyPath: "title", ascending: true)
         tableView.reloadData()
     }
+    
+    //MARK:- Delete data with Swipe
+    
+    override func updateModel(at indexPath: IndexPath) {
+        
+        if let itemForDeletion = self.todoItems?[indexPath.row] {
+            do {
+                try self.realm.write {
+                    self.realm.delete(itemForDeletion)
+                }
+            }catch {
+                print("Error saving status of item, \(error)")
+            }
+        }
     }
-
+}
 
 //MARK:- Search Bar methods
 
